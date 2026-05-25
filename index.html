@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Карточки: Анализ данных</title>
 <style>
   :root {
@@ -61,22 +61,27 @@
   .blocks-nav {
     width: 100%;
     max-width: 960px;
-    padding: 20px 16px 0;
+    padding: 16px 12px 0;
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .blocks-nav::-webkit-scrollbar { display: none; }
   .block-btn {
-    padding: 6px 14px;
+    padding: 6px 12px;
     border-radius: 20px;
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.15s;
     white-space: nowrap;
+    flex-shrink: 0;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
   }
   .block-btn:hover { border-color: var(--accent); color: var(--text); }
   .block-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
@@ -113,8 +118,42 @@
   .card-wrap {
     width: 100%;
     max-width: 720px;
-    padding: 24px 16px;
+    padding: 20px 16px 8px;
     perspective: 1200px;
+    touch-action: none;
+  }
+  .drag-wrap {
+    position: relative;
+    will-change: transform;
+    transform-origin: center bottom;
+  }
+  /* Swipe hint badges */
+  .swipe-badge {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 2px solid;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .swipe-badge.left {
+    left: 16px;
+    color: var(--red);
+    border-color: var(--red);
+    background: rgba(248,113,113,0.12);
+  }
+  .swipe-badge.right {
+    right: 16px;
+    color: var(--green);
+    border-color: var(--green);
+    background: rgba(74,222,128,0.12);
   }
   .card-scene {
     width: 100%;
@@ -324,11 +363,25 @@
   .toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
   .toggle-btn.on { border-color: var(--accent); color: var(--accent); background: rgba(124,109,250,0.1); }
 
+  .kbd-hint { display: flex; }
+  .touch-hint { display: none; font-size: 0.78rem; color: var(--muted); margin-top: 18px; }
+
   @media (max-width: 600px) {
+    header { padding: 12px 16px; }
+    header h1 { font-size: 0.88rem; }
+    .header-stats { gap: 10px; font-size: 0.75rem; }
     .card-text { font-size: 1.05rem; }
-    .card-face { padding: 28px 22px; }
-    header h1 { font-size: 0.95rem; }
-    .header-stats { gap: 12px; font-size: 0.78rem; }
+    .card-text code { font-size: 0.82em; word-break: break-all; }
+    .card-face { padding: 24px 20px; min-height: 240px; }
+    .btn { min-height: 44px; padding: 10px 14px; font-size: 0.84rem; }
+    .kbd-hint { display: none; }
+    .touch-hint { display: block; }
+  }
+  @media (hover: none) {
+    .btn:hover { border-color: var(--border); background: var(--surface); }
+    .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+    .block-btn:hover { border-color: var(--border); color: var(--muted); }
+    .block-btn.active { color: #fff; }
   }
 </style>
 </head>
@@ -358,17 +411,23 @@
   </div>
 </div>
 
-<div class="card-wrap">
-  <div class="card-scene" id="card-scene" onclick="flipCard()">
-    <div class="card-face front">
-      <div class="card-label">Вопрос</div>
-      <div class="card-text" id="card-front-text">Загрузка...</div>
-      <div class="card-hint"><span class="kbd">Пробел</span> перевернуть</div>
-    </div>
-    <div class="card-face back">
-      <div class="card-label">Ответ</div>
-      <div class="card-text" id="card-back-text"></div>
-      <div class="card-hint">Знаешь? <span class="kbd">←</span> нет &nbsp; <span class="kbd">→</span> да</div>
+<div class="card-wrap" id="card-wrap">
+  <div class="drag-wrap" id="drag-wrap">
+    <div class="swipe-badge left" id="badge-left"></div>
+    <div class="swipe-badge right" id="badge-right"></div>
+    <div class="card-scene" id="card-scene">
+      <div class="card-face front">
+        <div class="card-label">Вопрос</div>
+        <div class="card-text" id="card-front-text">Загрузка...</div>
+        <div class="card-hint kbd-hint"><span class="kbd">Пробел</span> перевернуть</div>
+        <div class="touch-hint">Нажми, чтобы увидеть ответ</div>
+      </div>
+      <div class="card-face back">
+        <div class="card-label">Ответ</div>
+        <div class="card-text" id="card-back-text"></div>
+        <div class="card-hint kbd-hint">Знаешь? <span class="kbd">←</span> нет &nbsp; <span class="kbd">→</span> да</div>
+        <div class="touch-hint">Свайп → знаю &nbsp;&nbsp; Свайп ← не знаю</div>
+      </div>
     </div>
   </div>
 </div>
@@ -869,6 +928,114 @@ document.addEventListener('keydown', e => {
   if (e.code === 'ArrowRight') { if (isFlipped) markCard(true); else nextCard(); }
   if (e.code === 'ArrowLeft') { if (isFlipped) markCard(false); else prevCard(); }
 });
+
+// ── Touch / swipe ──────────────────────────────────────────────
+(function() {
+  const dragWrap = document.getElementById('drag-wrap');
+  const badgeL  = document.getElementById('badge-left');
+  const badgeR  = document.getElementById('badge-right');
+  const SWIPE_THRESHOLD = 72;
+  const LOCK_THRESHOLD  = 8;
+
+  let startX = 0, startY = 0, curX = 0;
+  let axis = null; // null | 'h' | 'v'
+  let busy = false;
+
+  function applyDrag(x) {
+    const deg = Math.min(Math.max(x / 28, -12), 12);
+    dragWrap.style.transform = `translateX(${x}px) rotate(${deg}deg)`;
+  }
+
+  function resetDrag(animate) {
+    if (animate) dragWrap.style.transition = 'transform 0.22s ease';
+    dragWrap.style.transform = '';
+    if (animate) setTimeout(() => { dragWrap.style.transition = ''; }, 230);
+    else dragWrap.style.transition = '';
+  }
+
+  function showBadges(x) {
+    const abs = Math.abs(x);
+    const op  = Math.min(Math.max((abs - 20) / (SWIPE_THRESHOLD - 20), 0), 1);
+    if (isFlipped) {
+      badgeL.textContent = '✗ Не знаю';
+      badgeR.textContent = '✓ Знаю';
+    } else {
+      badgeL.textContent = '← Назад';
+      badgeR.textContent = 'Далее →';
+    }
+    badgeL.style.opacity = x < -20 ? op : 0;
+    badgeR.style.opacity = x >  20 ? op : 0;
+  }
+
+  function hideBadges() {
+    badgeL.style.opacity = 0;
+    badgeR.style.opacity = 0;
+  }
+
+  dragWrap.addEventListener('touchstart', e => {
+    if (busy) return;
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY;
+    curX = 0; axis = null;
+    dragWrap.style.transition = 'none';
+  }, { passive: true });
+
+  dragWrap.addEventListener('touchmove', e => {
+    if (busy) { e.preventDefault(); return; }
+    const t  = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    if (axis === null) {
+      if (Math.abs(dx) < LOCK_THRESHOLD && Math.abs(dy) < LOCK_THRESHOLD) return;
+      axis = Math.abs(dx) >= Math.abs(dy) ? 'h' : 'v';
+    }
+    if (axis === 'h') {
+      e.preventDefault();
+      curX = dx;
+      applyDrag(curX);
+      showBadges(curX);
+    }
+  }, { passive: false });
+
+  dragWrap.addEventListener('touchend', e => {
+    hideBadges();
+    dragWrap.style.transition = '';
+
+    const totalDist = Math.hypot(
+      e.changedTouches[0].clientX - startX,
+      e.changedTouches[0].clientY - startY
+    );
+
+    if (axis === 'h' && Math.abs(curX) >= SWIPE_THRESHOLD && !busy) {
+      // Committed swipe — snap back then act
+      const goRight = curX > 0;
+      busy = true;
+      resetDrag(true);
+      setTimeout(() => {
+        busy = false;
+        if (isFlipped) markCard(goRight);
+        else { if (goRight) prevCard(); else nextCard(); }
+      }, 230);
+    } else if (totalDist < 10 && !busy) {
+      // Tap
+      resetDrag(false);
+      flipCard();
+    } else {
+      // Short swipe — bounce back
+      resetDrag(true);
+    }
+
+    curX = 0; axis = null;
+  }, { passive: true });
+
+  // Prevent click-after-touch double-trigger on card-scene
+  document.getElementById('card-scene').addEventListener('click', e => {
+    if ('ontouchstart' in window) e.stopPropagation();
+  });
+  if (!('ontouchstart' in window)) {
+    document.getElementById('card-scene').addEventListener('click', flipCard);
+  }
+})();
 
 initBlock(0);
 </script>
