@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карточки: Анализ данных</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22223a;
+    --accent: #7c6dfa;
+    --accent2: #a78bfa;
+    --green: #4ade80;
+    --red: #f87171;
+    --text: #e8e8f0;
+    --muted: #8888aa;
+    --border: #2e2e48;
+    --card-front: #1e1e30;
+    --card-back: #1a2535;
+    --code-bg: #0d1117;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* HEADER */
+  header {
+    width: 100%;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  header h1 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: 0.02em;
+  }
+  .header-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .stat-val { color: var(--text); font-weight: 600; }
+
+  /* BLOCK TABS */
+  .blocks-nav {
+    width: 100%;
+    max-width: 960px;
+    padding: 20px 16px 0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .block-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .block-btn:hover { border-color: var(--accent); color: var(--text); }
+  .block-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+  /* PROGRESS */
+  .progress-wrap {
+    width: 100%;
+    max-width: 720px;
+    padding: 20px 16px 0;
+  }
+  .progress-bar-bg {
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .progress-label span:last-child { color: var(--accent2); font-weight: 600; }
+
+  /* CARD */
+  .card-wrap {
+    width: 100%;
+    max-width: 720px;
+    padding: 24px 16px;
+    perspective: 1200px;
+  }
+  .card-scene {
+    width: 100%;
+    min-height: 260px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.5s cubic-bezier(.4,0,.2,1);
+    cursor: pointer;
+  }
+  .card-scene.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    width: 100%;
+    min-height: 260px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 16px;
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    transition: border-color 0.3s;
+  }
+  .card-face.front {
+    background: var(--card-front);
+    border-top: 3px solid var(--accent);
+  }
+  .card-face.back {
+    background: var(--card-back);
+    border-top: 3px solid var(--green);
+    transform: rotateY(180deg);
+  }
+  .card-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .card-face.back .card-label { color: var(--green); opacity: 0.7; }
+  .card-text {
+    font-size: 1.25rem;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.6;
+    color: var(--text);
+  }
+  .card-text strong { color: var(--accent2); }
+  .card-text code {
+    font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    background: var(--code-bg);
+    color: #79c0ff;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 0.95em;
+    border: 1px solid #30363d;
+  }
+  .card-hint {
+    margin-top: 20px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    color: var(--text);
+  }
+
+  /* CONTROLS */
+  .controls {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); background: var(--surface2); }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-green { background: transparent; border-color: var(--green); color: var(--green); }
+  .btn-red { background: transparent; border-color: var(--red); color: var(--red); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+  .result-btns {
+    display: flex;
+    gap: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .result-btns.visible { opacity: 1; pointer-events: all; }
+
+  /* SCORE DOTS */
+  .dot-row {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .dot.known { background: var(--green); }
+  .dot.unknown { background: var(--red); }
+  .dot.current { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* BLOCK HEADER */
+  .block-header {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .block-title {
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .block-badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+  }
+
+  /* RESULTS PANEL */
+  .results-panel {
+    display: none;
+    width: 100%;
+    max-width: 720px;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .results-panel.visible { display: block; }
+  .results-big {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 8px;
+  }
+  .results-sub { color: var(--muted); margin-bottom: 24px; }
+  .results-bars {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .results-bar-item { text-align: center; font-size: 0.78rem; color: var(--muted); }
+  .results-bar-num { font-size: 1.3rem; font-weight: 700; margin-bottom: 2px; }
+  .num-green { color: var(--green); }
+  .num-red { color: var(--red); }
+
+  /* SHUFFLE INDICATOR */
+  .mode-indicator {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .toggle-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 10px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .toggle-btn.on { border-color: var(--accent); color: var(--accent); background: rgba(124,109,250,0.1); }
+
+  @media (max-width: 600px) {
+    .card-text { font-size: 1.05rem; }
+    .card-face { padding: 28px 22px; }
+    header h1 { font-size: 0.95rem; }
+    .header-stats { gap: 12px; font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 Анализ данных — Карточки</h1>
+  <div class="header-stats">
+    <span>Блок: <span class="stat-val" id="hdr-block">1/13</span></span>
+    <span>Знаю: <span class="stat-val" id="hdr-known" style="color:var(--green)">0</span></span>
+    <span>Не знаю: <span class="stat-val" id="hdr-unknown" style="color:var(--red)">0</span></span>
+  </div>
+</header>
+
+<div class="blocks-nav" id="blocks-nav"></div>
+
+<div class="progress-wrap">
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="progress-label"><span id="prog-text">0 из 0</span><span id="prog-pct">0%</span></div>
+</div>
+
+<div class="block-header" style="margin-top:12px">
+  <span class="block-badge" id="block-badge">Блок 1</span>
+  <span class="block-title" id="block-title">Шкалы измерения</span>
+  <div class="mode-indicator" style="margin-left:auto">
+    <button class="toggle-btn" id="shuffle-btn" onclick="toggleShuffle()">🔀 Перемешать</button>
+  </div>
+</div>
+
+<div class="card-wrap">
+  <div class="card-scene" id="card-scene" onclick="flipCard()">
+    <div class="card-face front">
+      <div class="card-label">Вопрос</div>
+      <div class="card-text" id="card-front-text">Загрузка...</div>
+      <div class="card-hint"><span class="kbd">Пробел</span> перевернуть</div>
+    </div>
+    <div class="card-face back">
+      <div class="card-label">Ответ</div>
+      <div class="card-text" id="card-back-text"></div>
+      <div class="card-hint">Знаешь? <span class="kbd">←</span> нет &nbsp; <span class="kbd">→</span> да</div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn" id="btn-prev" onclick="prevCard()">← Назад</button>
+  <div class="result-btns" id="result-btns">
+    <button class="btn btn-red" onclick="markCard(false)">✗ Не знаю</button>
+    <button class="btn btn-green" onclick="markCard(true)">✓ Знаю</button>
+  </div>
+  <button class="btn btn-primary" id="btn-next" onclick="nextCard()">Далее →</button>
+</div>
+
+<div class="dot-row" id="dot-row"></div>
+
+<div class="results-panel" id="results-panel">
+  <div class="results-big" id="res-score">100%</div>
+  <div class="results-sub" id="res-sub">Блок пройден!</div>
+  <div class="results-bars">
+    <div class="results-bar-item"><div class="results-bar-num num-green" id="res-known">0</div>Знаю</div>
+    <div style="width:1px;background:var(--border)"></div>
+    <div class="results-bar-item"><div class="results-bar-num num-red" id="res-unknown">0</div>Не знаю</div>
+    <div style="width:1px;background:var(--border)"></div>
+    <div class="results-bar-item"><div class="results-bar-num" id="res-total">0</div>Всего</div>
+  </div>
+  <button class="btn btn-primary" onclick="restartBlock()" style="margin:0 auto;display:flex">🔄 Повторить блок</button>
+</div>
+
+<script>
+const BLOCKS = [
+  {
+    title: "Шкалы измерения",
+    cards: [
+      ["Уровень дохода: низкий / средний / высокий", "Категориальная <strong>порядковая</strong>"],
+      ["Цвет товара: красный, зелёный, синий", "Категориальная <strong>номинальная</strong>"],
+      ["Совершил ли покупку: 1 — да, 0 — нет", "Категориальная <strong>бинарная</strong>"],
+      ["Время на сайте в минутах", "Количественная <strong>непрерывная</strong>"],
+      ["Количество товаров в корзине", "Количественная <strong>дискретная</strong>"],
+      ["Оценка студента: A, B, C, D", "Категориальная <strong>порядковая</strong>"],
+      ["Название страны", "Категориальная <strong>номинальная</strong>"],
+      ["Температура воздуха", "Количественная <strong>непрерывная</strong>"],
+      ["Количество детей в семье", "Количественная <strong>дискретная</strong>"],
+      ["Есть ли подписка: да / нет", "Категориальная <strong>бинарная</strong>"],
+    ]
+  },
+  {
+    title: "Описательные статистики",
+    cards: [
+      ["Данные симметричные, без выбросов → какую меру выбрать?", "<strong>Среднее</strong>"],
+      ["Есть выбросы / скошенное распределение → какую меру выбрать?", "<strong>Медиана</strong>"],
+      ["Категориальные данные → какую меру выбрать?", "<strong>Мода</strong>"],
+      ["«Большинство ждали 10–20 мин, но некоторые — 2 часа» → что использовать?", "<strong>Медиана</strong> (есть выбросы)"],
+      ["Нужна мера разброса, чувствительная ко всем значениям", "<strong>Стандартное отклонение</strong>"],
+      ["Нужна мера разброса, устойчивая к выбросам", "<strong>IQR</strong> (межквартильный размах)"],
+    ]
+  },
+  {
+    title: "Корреляция",
+    cards: [
+      ["Пирсон измеряет... какой тип связи?", "<strong>Линейную</strong> связь"],
+      ["Спирмен измеряет... какой тип связи?", "<strong>Монотонную</strong> связь"],
+      ["Коэффициент Спирмена = 0.40 — как правильно описать?", "Умеренная положительная <strong>монотонная</strong> связь"],
+      ["Коэффициент Пирсона = −0.85 — как правильно описать?", "Сильная отрицательная <strong>линейная</strong> связь"],
+      ["Какой коэффициент устойчив к выбросам?", "<strong>Спирмен</strong>"],
+      ["Значение коэффициента = 0 — что означает?", "<strong>Связи нет</strong>"],
+      ["0.4 – 0.8 — это какая сила связи?", "<strong>Умеренная</strong>"],
+      ["0.8 – 1.0 — это какая сила связи?", "<strong>Сильная</strong>"],
+      ["0 – 0.4 — это какая сила связи?", "<strong>Слабая</strong>"],
+    ]
+  },
+  {
+    title: "Ошибки I и II рода",
+    cards: [
+      ["Отвергли H₀, а она на самом деле верна — это...?", "<strong>Ошибка I рода</strong> («ложная тревога»)"],
+      ["Не отвергли H₀, а она на самом деле ложна — это...?", "<strong>Ошибка II рода</strong> («пропуск»)"],
+      ["«Продукт безопасен» (H₀). Решили: безопасен. Реально: вызывает аллергию.", "<strong>Ошибка II рода</strong> — не отвергли H₀, а она ложна"],
+      ["A/B тест: не нашли эффект, а он есть", "<strong>Ошибка II рода</strong>"],
+      ["«Лекарство не работает» (H₀). Решили: работает. Реально: не работает.", "<strong>Ошибка I рода</strong> — отвергли H₀, а она верна"],
+      ["Мнемоника: I род — это...?", "«Волк-волк!» — <strong>ложная тревога</strong> когда волка нет"],
+      ["Мнемоника: II род — это...?", "Волк пришёл, но мы не заметили — <strong>пропуск</strong>"],
+    ]
+  },
+  {
+    title: "p-value и значимость",
+    cards: [
+      ["Правило принятия решения через p-value", "Если <strong>p-value < α</strong> → отвергаем H₀"],
+      ["p-value = 0.02, α = 1% — что делаем с H₀?", "<strong>Не отвергаем</strong> (0.02 > 0.01)"],
+      ["p-value = 0.02, α = 5% — что делаем с H₀?", "<strong>Отвергаем</strong> (0.02 < 0.05)"],
+      ["p-value = 0.07, α = 10% — что делаем с H₀?", "<strong>Отвергаем</strong> (0.07 < 0.10)"],
+      ["p-value = 0.07, α = 5% — что делаем с H₀?", "<strong>Не отвергаем</strong> (0.07 > 0.05)"],
+      ["p-value = 0.001 — при каких α отвергаем H₀?", "При <strong>любом</strong> стандартном уровне (1%, 5%, 10%)"],
+    ]
+  },
+  {
+    title: "Метрики линейной регрессии",
+    cards: [
+      ["R² = 0.85 — что это означает?", "Модель объясняет <strong>85%</strong> дисперсии целевой переменной"],
+      ["R² = 0.85 — сколько % дисперсии НЕ объясняет?", "<strong>15%</strong> (не 85%!)"],
+      ["MAE = 2.5 тыс. руб — как интерпретировать?", "В среднем модель ошибается на <strong>2.5 тыс. руб</strong>"],
+      ["MSE — в каких единицах?", "В <strong>квадратных</strong> единицах. Напрямую не интерпретируется"],
+      ["Какая метрика = доля объяснённой дисперсии?", "<strong>R²</strong>"],
+      ["Y = 5 + 2.5·X₁. X₁ вырос на 1 → Y изменится на?", "<strong>+2.5</strong>"],
+      ["Y = 5 + 0.1·ln(X₂). X₂ вырос на 1% → Y изменится на?", "<strong>≈ 0.001</strong> (не 0.1!)"],
+    ]
+  },
+  {
+    title: "ROC и матрица ошибок",
+    cards: [
+      ["AUC = 0.5 — что это означает?", "Модель = <strong>случайный классификатор</strong>"],
+      ["AUC = 1.0 — что это означает?", "<strong>Идеальная</strong> модель"],
+      ["ROC-кривая выше диагонали — что это значит?", "Модель <strong>лучше</strong> случайного"],
+      ["Ось X на ROC — это?", "<strong>FPR</strong> (False Positive Rate)"],
+      ["Ось Y на ROC — это?", "<strong>TPR</strong> (True Positive Rate = Recall)"],
+      ["TP — предсказали 1, реально...?", "Реально <strong>1</strong> ✓"],
+      ["FP — предсказали 1, реально...?", "Реально <strong>0</strong> (ложная тревога)"],
+      ["FN — предсказали 0, реально...?", "Реально <strong>1</strong> (пропуск)"],
+      ["TN — предсказали 0, реально...?", "Реально <strong>0</strong> ✓"],
+      ["Формула Accuracy?", "(TP + TN) / (TP + TN + FP + FN)"],
+      ["Формула Precision?", "TP / (TP + FP)"],
+      ["Формула Recall?", "TP / (TP + FN)"],
+      ["Формула F1?", "2 × Precision × Recall / (Precision + Recall)"],
+    ]
+  },
+  {
+    title: "Выбор статистического теста",
+    cards: [
+      ["Сравниваем среднее одной группы с константой", "<strong>Одновыборочный t-тест</strong>"],
+      ["Сравниваем одних и тех же людей до и после", "<strong>Парный t-тест</strong>"],
+      ["Две независимые группы + нормальное распределение", "<strong>Двухвыборочный t-тест</strong>"],
+      ["Две независимые группы + НЕ нормальное распределение", "<strong>U-тест Манна–Уитни</strong>"],
+      ["Сравниваем категориальные переменные", "<strong>Хи-квадрат</strong>"],
+      ["Сравниваем доли (проценты)", "<strong>Z-тест для пропорций</strong>"],
+      ["Проверяем нормальность распределения", "<strong>Тест Шапиро–Уилка</strong>"],
+      ["Шапиро: p > 0.05 → что это значит для теста?", "Нормальное распределение → можно <strong>t-тест</strong>"],
+      ["Шапиро: p ≤ 0.05 → что это значит для теста?", "НЕ нормальное → используем <strong>U-тест Манна–Уитни</strong>"],
+    ]
+  },
+  {
+    title: "Pandas — статистики",
+    cards: [
+      ["Как посчитать среднее?", "<code>df['col'].mean()</code>"],
+      ["Как посчитать медиану?", "<code>df['col'].median()</code>"],
+      ["Как посчитать стандартное отклонение?", "<code>df['col'].std()</code>"],
+      ["Генеральная дисперсия (делим на N)?", "<code>df['col'].var(ddof=0)</code>"],
+      ["Выборочная дисперсия (делим на N−1)?", "<code>df['col'].var(ddof=1)</code>"],
+      ["Q1 (25-й перцентиль)?", "<code>df['col'].quantile(0.25)</code>"],
+      ["Q3 (75-й перцентиль)?", "<code>df['col'].quantile(0.75)</code>"],
+      ["Как найти размах (max − min)?", "<code>df['col'].max() - df['col'].min()</code>"],
+      ["Самое частое значение в колонке?", "<code>df['col'].value_counts().idxmax()</code>"],
+      ["Количество уникальных значений?", "<code>df['col'].nunique()</code>"],
+      ["Строка с минимальным значением?", "<code>df.loc[df['col'].idxmin()]</code>"],
+      ["Строка с максимальным значением?", "<code>df.loc[df['col'].idxmax()]</code>"],
+      ["Количество пропусков в колонке?", "<code>df['col'].isnull().sum()</code>"],
+      ["Длина строки для каждой строки?", "<code>df['col'].str.len()</code>"],
+    ]
+  },
+  {
+    title: "Работа с датами",
+    cards: [
+      ["Как преобразовать строку в дату?", "<code>pd.to_datetime(df['col'])</code>"],
+      ["Как извлечь год?", "<code>df['col'].dt.year</code>"],
+      ["Как извлечь месяц?", "<code>df['col'].dt.month</code>"],
+      ["Как извлечь час?", "<code>df['col'].dt.hour</code>"],
+      ["День недели (0 = пн, 6 = вс)?", "<code>df['col'].dt.dayofweek</code>"],
+      ["Фильтр: только 2022 год?", "<code>df[df['col'].dt.year == 2022]</code>"],
+      ["Фильтр: октябрь (месяц 10)?", "<code>df[df['col'].dt.month == 10]</code>"],
+      ["Фильтр: утро 4:00–11:59?", "<code>df[(df['col'].dt.hour >= 4) &amp; (df['col'].dt.hour &lt;= 11)]</code>"],
+      ["Как найти самое раннее бронирование?", "<code>df.loc[df['col'].idxmin()]</code>"],
+    ]
+  },
+  {
+    title: "Предобработка данных",
+    cards: [
+      ["Как заполнить пропуски модой по группам?", "<code>df.groupby('region')['cat'].transform(lambda x: x.fillna(x.mode()[0]))</code>"],
+      ["Как удалить выбросы методом 1.5×IQR?", "<code>df[(df['col'] >= Q1-1.5*IQR) &amp; (df['col'] &lt;= Q3+1.5*IQR)]</code>"],
+      ["Как сделать Label Encoding?", "<code>LabelEncoder().fit_transform(df['col'])</code>"],
+      ["LabelEncoder: A, B, C, D → какие числа?", "<strong>A=0, B=1, C=2, D=3</strong> (по алфавиту)"],
+      ["Как объединить две таблицы по id?", "<code>df2.merge(df1[['id','col']], left_on='id_rent', right_on='id', how='left')</code>"],
+      ["Задания части C нужно выполнять...?", "<strong>Последовательно</strong> — каждое задание зависит от предыдущего"],
+    ]
+  },
+  {
+    title: "Логистическая регрессия",
+    cards: [
+      ["Как импортировать логистическую регрессию?", "<code>from sklearn.linear_model import LogisticRegression</code>"],
+      ["Как обучить модель?", "<code>model = LogisticRegression().fit(X_train, y_train)</code>"],
+      ["Как предсказать вероятность?", "<code>model.predict_proba(X_new)</code>"],
+      ["Как получить вероятность класса 1?", "<code>model.predict_proba(X_new)[0][1]</code>"],
+      ["Как посчитать log loss?", "<code>from sklearn.metrics import log_loss</code><br><code>log_loss(y_test, model.predict_proba(X_test))</code>"],
+      ["Как найти признак с наибольшей корреляцией со target (Спирмен)?", "<code>df.corr(method='spearman')['target'].drop('target').abs().idxmax()</code>"],
+      ["Как разделить выборку 80/20, random_state=42?", "<code>train_test_split(X, y, test_size=0.2, random_state=42)</code>"],
+    ]
+  },
+  {
+    title: "Частые ловушки",
+    cards: [
+      ["R² = 0.85 → объясняет сколько%?", "<strong>85%</strong> дисперсии (не 15%!)"],
+      ["MSE = 50 → средняя ошибка = 50?", "<strong>Нет!</strong> MSE в квадратных единицах. Средняя ошибка = MAE"],
+      ["ddof по умолчанию в pandas .var()?", "<strong>ddof=1</strong> (выборочная). Для генеральной → ddof=0"],
+      ["Спирмен 0.40 → «линейная» или «монотонная» связь?", "<strong>Монотонная</strong> (не линейная!)"],
+      ["Не нашли эффект, а он есть → ошибка какого рода?", "<strong>II рода</strong> (не I!)"],
+      ["p = 0.02, α = 1% → отвергаем H₀?", "<strong>Нет</strong> (0.02 > 0.01)"],
+      ["Label Encoding A, B, C, D → D кодируется как?", "<strong>3</strong>"],
+      ["Часть C — порядок выполнения важен?", "<strong>Да!</strong> Строго последовательно, иначе ответы будут неверными"],
+      ["MAE = 2.5 тыс. руб → средняя ошибка = ?", "<strong>2.5 тыс. руб</strong> (MAE интерпретируется напрямую)"],
+    ]
+  },
+];
+
+let currentBlock = 0;
+let currentIndex = 0;
+let isFlipped = false;
+let results = [];
+let shuffled = false;
+let order = [];
+
+function initBlock(blockIdx) {
+  currentBlock = blockIdx;
+  currentIndex = 0;
+  isFlipped = false;
+  const n = BLOCKS[blockIdx].cards.length;
+  results = new Array(n).fill(null);
+  order = Array.from({length: n}, (_, i) => i);
+  if (shuffled) shuffle(order);
+  renderBlockNav();
+  renderDots();
+  renderCard();
+  document.getElementById('results-panel').classList.remove('visible');
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function renderBlockNav() {
+  const nav = document.getElementById('blocks-nav');
+  nav.innerHTML = BLOCKS.map((b, i) => {
+    const known = i === currentBlock ? results.filter(r => r === true).length : 0;
+    return `<button class="block-btn ${i === currentBlock ? 'active' : ''}" onclick="initBlock(${i})">
+      ${i+1}. ${b.title}
+    </button>`;
+  }).join('');
+}
+
+function renderCard() {
+  const block = BLOCKS[currentBlock];
+  const realIdx = order[currentIndex];
+  const [q, a] = block.cards[realIdx];
+
+  document.getElementById('card-front-text').innerHTML = q;
+  document.getElementById('card-back-text').innerHTML = a;
+  document.getElementById('card-scene').classList.remove('flipped');
+  isFlipped = false;
+
+  document.getElementById('block-badge').textContent = `Блок ${currentBlock + 1}`;
+  document.getElementById('block-title').textContent = block.title;
+
+  const n = block.cards.length;
+  const done = results.filter(r => r !== null).length;
+  document.getElementById('prog-fill').style.width = (done / n * 100) + '%';
+  document.getElementById('prog-text').textContent = `${done} из ${n}`;
+  document.getElementById('prog-pct').textContent = Math.round(done / n * 100) + '%';
+  document.getElementById('hdr-block').textContent = `${currentBlock + 1}/13`;
+  updateGlobalStats();
+
+  document.getElementById('result-btns').classList.remove('visible');
+  document.getElementById('btn-prev').disabled = currentIndex === 0;
+
+  renderDots();
+}
+
+function renderDots() {
+  const n = BLOCKS[currentBlock].cards.length;
+  const row = document.getElementById('dot-row');
+  row.innerHTML = Array.from({length: n}, (_, i) => {
+    const realIdx = order[i];
+    const r = results[realIdx];
+    let cls = i === currentIndex ? 'current' : r === true ? 'known' : r === false ? 'unknown' : '';
+    return `<div class="dot ${cls}"></div>`;
+  }).join('');
+}
+
+function updateGlobalStats() {
+  let known = 0, unknown = 0;
+  BLOCKS.forEach((b, bi) => {
+    if (bi === currentBlock) {
+      results.forEach(r => { if (r === true) known++; if (r === false) unknown++; });
+    }
+  });
+  document.getElementById('hdr-known').textContent = known;
+  document.getElementById('hdr-unknown').textContent = unknown;
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('card-scene').classList.toggle('flipped', isFlipped);
+  if (isFlipped) {
+    document.getElementById('result-btns').classList.add('visible');
+  }
+}
+
+function markCard(known) {
+  const realIdx = order[currentIndex];
+  results[realIdx] = known;
+  renderDots();
+  updateGlobalStats();
+  setTimeout(() => {
+    if (currentIndex < order.length - 1) {
+      currentIndex++;
+      renderCard();
+    } else {
+      showResults();
+    }
+  }, 200);
+}
+
+function nextCard() {
+  if (currentIndex < order.length - 1) {
+    currentIndex++;
+    renderCard();
+  } else {
+    showResults();
+  }
+}
+
+function prevCard() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    renderCard();
+  }
+}
+
+function showResults() {
+  const known = results.filter(r => r === true).length;
+  const unknown = results.filter(r => r === false).length;
+  const total = BLOCKS[currentBlock].cards.length;
+  const answered = known + unknown;
+  const pct = answered > 0 ? Math.round(known / answered * 100) : 0;
+
+  document.getElementById('res-score').textContent = pct + '%';
+  document.getElementById('res-sub').textContent = pct === 100 ? '🎉 Блок полностью пройден!' : `Правильно: ${known} из ${answered}`;
+  document.getElementById('res-known').textContent = known;
+  document.getElementById('res-unknown').textContent = unknown;
+  document.getElementById('res-total').textContent = total;
+  document.getElementById('results-panel').classList.add('visible');
+}
+
+function restartBlock() {
+  document.getElementById('results-panel').classList.remove('visible');
+  initBlock(currentBlock);
+}
+
+function toggleShuffle() {
+  shuffled = !shuffled;
+  document.getElementById('shuffle-btn').classList.toggle('on', shuffled);
+  initBlock(currentBlock);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); flipCard(); }
+  if (e.code === 'ArrowRight') { if (isFlipped) markCard(true); else nextCard(); }
+  if (e.code === 'ArrowLeft') { if (isFlipped) markCard(false); else prevCard(); }
+});
+
+initBlock(0);
+</script>
+</body>
+</html>
