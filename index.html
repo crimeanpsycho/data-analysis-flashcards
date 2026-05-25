@@ -805,6 +805,13 @@ function markCard(known) {
   results[realIdx] = known;
   renderDots();
   updateGlobalStats();
+
+  // Сначала переворачиваем обратно — контент не меняем
+  document.getElementById('card-scene').classList.remove('flipped');
+  document.getElementById('result-btns').classList.remove('visible');
+  isFlipped = false;
+
+  // Меняем контент только после завершения анимации
   setTimeout(() => {
     if (currentIndex < order.length - 1) {
       currentIndex++;
@@ -812,7 +819,7 @@ function markCard(known) {
     } else {
       showResults();
     }
-  }, 200);
+  }, 520);
 }
 
 function nextCard() {
