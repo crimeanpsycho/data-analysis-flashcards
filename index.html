@@ -746,6 +746,43 @@ const BLOCKS = [
     ]
   },
   {
+    title: "Практика B2 — Создание признаков",
+    cards: [
+      ["Создать признак len name (длина названия)?", "<code>df['len name'] = df['name'].str.len()</code>"],
+      ["Среднее len name — код?", "<code>round(df['len name'].mean(), 2)</code>"],
+      ["Создать индикатор no smoking rule (1 если 'no smoking' в house rules)?", "<code>df['no smoking rule'] = df['house rules'].str.lower().str.contains('no smoking', na=False).astype(int)</code>"],
+      ["Процент объявлений БЕЗ запрета курения (значение 0)?", "<code>round((df['no smoking rule'] == 0).sum() / len(df) * 100, 2)</code>"],
+      ["Создать num hosts — количество хозяев через запятую?", "<code>df['num hosts'] = df['host name'].str.split(', ').str.len()</code>"],
+      ["Стандартное отклонение num hosts?", "<code>round(df['num hosts'].std(), 2)</code>"],
+      ["Создать season: зима→1, весна→2, лето→3, осень→4?", "<code>m = df['last booking'].dt.month</code><br><code>df['season'] = np.select([m.isin([12,1,2]), m.isin([3,4,5]), m.isin([6,7,8]), m.isin([9,10,11])], [1,2,3,4])</code>"],
+      ["Среднее по season?", "<code>round(df['season'].mean(), 2)</code>"],
+      ["Создать признак week — номер недели в году?", "<code>df['week'] = df['last booking'].dt.isocalendar().week.astype(int)</code>"],
+      ["Найти месяц недели с наибольшим числом бронирований?", "<code>top_week = df['week'].value_counts().idxmax()</code><br><code>df[df['week'] == top_week]['last booking'].dt.month.mode()[0]</code>"],
+      ["Почему str.contains нужен na=False?", "Без него NaN в house rules → <strong>ошибка</strong>. na=False заменяет NaN на False"],
+      ["dt.week vs dt.isocalendar().week — что использовать?", "<code>dt.isocalendar().week.astype(int)</code> — dt.week <strong>устарело</strong> в новых pandas"],
+    ]
+  },
+  {
+    title: "Практика B3 — Объединение таблиц",
+    cards: [
+      ["Базовый шаблон merge train_B с доп. файлом?", "<code>merged = df_extra.merge(df_main[['id','col']], left_on='id rent', right_on='id', how='left')</code>"],
+      ["inner vs left join — когда что?", "inner — только совпадения в <strong>обеих</strong> таблицах; left — все строки из левой"],
+      ["B3 Q1: сервисный сбор как % от цены?", "<code>merged['ratio'] = (merged['service fee'] / merged['price']) * 100</code><br><code>merged[merged['borough']=='Manhattan']['ratio'].quantile(0.75)</code>"],
+      ["Районы с < 100 предложениями → средняя цена?", "<code>counts = merged.groupby('area')['id'].count()</code><br><code>small = counts[counts < 100].index</code><br><code>merged[merged['area'].isin(small)].groupby('area')['price'].mean().idxmax()</code>"],
+      ["B3 Q2: среднее отзывов для 2016 года?", "<code>merged = df2.merge(df[['id','last booking']], left_on='id rent', right_on='id', how='left')</code><br><code>merged[merged['last booking'].dt.year==2016]['number of reviews'].mean()</code>"],
+      ["IQR по месяцам и месяц с минимальным IQR?", "<code>merged['month'] = merged['last booking'].dt.month</code><br><code>iqr = merged.groupby('month')['number of reviews'].apply(lambda x: x.quantile(0.75)-x.quantile(0.25))</code><br><code>iqr.idxmin()</code>"],
+      ["B3 Q3: медиана цены для availability == 365?", "<code>merged = df_main.merge(df3, left_on='id', right_on='id rent', how='inner')</code><br><code>round(merged[merged['availability']==365]['price'].median(), 2)</code>"],
+      ["Сколько районов с ненулевым размахом цены?", "<code>price_range = merged.groupby('area')['price'].apply(lambda x: x.max()-x.min())</code><br><code>(price_range != 0).sum()</code>"],
+      ["B3 Q4: объединить train_B и train4_B3 вертикально?", "<code>df4 = df4.rename(columns={'price per night':'price'})</code><br><code>combined = pd.concat([df_main[['id','host name','price']], df4[['id','host name','price']]], ignore_index=True)</code>"],
+      ["Хозяин с наибольшим числом объявлений и его заработок за 10 дней?", "<code>top = combined['host name'].value_counts().idxmax()</code><br><code>combined[combined['host name']==top]['price'].sum() * 10</code>"],
+      ["Дисперсия медианной цены для хозяев с > 1 объявлением?", "<code>multi = combined.groupby('host name').filter(lambda x: len(x) > 1)</code><br><code>round(multi.groupby('host name')['price'].median().var(ddof=0), 2)</code>"],
+      ["B3 Q5: плотность населения (pop/km2) по районам?", "<code>area_info = df5.drop_duplicates('area')[['area','pop','km2']].copy()</code><br><code>area_info['pop_density'] = area_info['pop'] / area_info['km2']</code>"],
+      ["Район Манхэттена с наименьшей плотностью населения?", "<code>mh_areas = merged[merged['borough']=='Manhattan']['area'].unique()</code><br><code>sub = area_info[area_info['area'].isin(mh_areas)]</code><br><code>sub.loc[sub['pop_density'].idxmin(), 'area']</code>"],
+      ["Плотность предложений (id/km2) — район с максимумом?", "<code>lc = merged.groupby('area')['id'].count().reset_index(name='cnt')</code><br><code>lc = lc.merge(area_info[['area','km2']], on='area')</code><br><code>lc['dens'] = lc['cnt'] / lc['km2']</code><br><code>round(lc['dens'].max(), 2)</code>"],
+      ["pd.concat vs merge — в чём разница?", "<strong>concat</strong> — склеивание строк (вертикально, одинаковые колонки);<br><strong>merge</strong> — JOIN по ключу (горизонтально)"],
+    ]
+  },
+  {
     title: "Практика C — ML pipeline",
     cards: [
       ["Как посчитать пропуски в столбце category?", "<code>df['category'].isnull().sum()</code>"],
