@@ -783,6 +783,25 @@ const BLOCKS = [
     ]
   },
   {
+    title: "Практика C — Вариации паттернов",
+    cards: [
+      ["C1: Заполнить пропуски МОДОЙ по группам (стандарт)", "<code>df['cat'] = df.groupby('region')['cat'].transform(lambda x: x.fillna(x.mode()[0]))</code>"],
+      ["C1: Заполнить пропуски по УСЛОВИЮ (выше среднего → 1, иначе → 0)", "<code>mean = df['steps'].mean()</code><br><code>mask = df['goal'].isnull()</code><br><code>df.loc[mask & (df['steps'] > mean), 'goal'] = 1</code><br><code>df.loc[mask & (df['steps'] <= mean), 'goal'] = 0</code>"],
+      ["C2: LabelEncoder — когда использовать?", "Порядковые категории или когда нужен один столбец с числами. <strong>A=0, B=1, C=2, D=3</strong>"],
+      ["C2: OneHotEncoder — когда использовать?", "Номинальные категории (Кардио, Йога, Танцы — нет порядка). Создаёт <strong>отдельный столбец для каждого значения</strong>"],
+      ["C2: OneHotEncoder — полный код с именами столбцов?", "<code>ohe = OneHotEncoder(sparse_output=False, dtype=int)</code><br><code>enc = ohe.fit_transform(df[['workout_type']])</code><br><code>cols = [f'workout_type_{c}' for c in ohe.categories_[0]]</code><br><code>df = pd.concat([df, pd.DataFrame(enc, columns=cols, index=df.index)], axis=1)</code>"],
+      ["C2: Сколько новых столбцов после OneHotEncoder?", "Равно количеству <strong>уникальных значений</strong> признака (например, C/D/S/Y = 4 столбца)"],
+      ["C3: Выбросы 1.5×IQR (стандарт)", "<code>Q1, Q3 = df['col'].quantile(0.25), df['col'].quantile(0.75)</code><br><code>IQR = Q3 - Q1</code><br><code>df_clean = df[(df['col'] >= Q1-1.5*IQR) & (df['col'] <= Q3+1.5*IQR)]</code>"],
+      ["C3: Выбросы 2×STD (если в задании написано '2 стандартных отклонения')", "<code>m, s = df['age'].mean(), df['age'].std()</code><br><code>df_clean = df[(df['age'] >= m - 2*s) & (df['age'] <= m + 2*s)].copy()</code>"],
+      ["C4: X1 для линейной регрессии avg_daily_steps — как найти?", "<code>exclude = {'avg_daily_steps', 'user_id'} | set(ohe_cols)</code><br><code>cands = [c for c in df_clean.select_dtypes('number').columns if c not in exclude]</code><br><code>X1 = df_clean[cands+['avg_daily_steps']].corr(method='spearman')['avg_daily_steps'].drop('avg_daily_steps').abs().idxmax()</code>"],
+      ["C4: Линейная регрессия, предсказать для X1=mode и workout_type_C=1?", "<code>model = LinearRegression().fit(X_train, y_train)</code><br><code>mode_val = df_clean[X1].mode()[0]</code><br><code>pt = pd.DataFrame({X1: [mode_val], 'workout_type_C': [1]})</code><br><code>round(model.predict(pt)[0], 2)</code>"],
+      ["C4d: Log loss — когда задача регрессии, но просят log_loss?", "Строим <strong>LogisticRegression</strong> на той же разбивке с бинарной целевой (goal_achieved):<br><code>log_m = LogisticRegression().fit(X_train, y_train_cls)</code><br><code>round(log_loss(y_test_cls, log_m.predict_proba(X_test)), 2)</code>"],
+      ["C5: Шапиро на бинарной переменной (0/1) — что покажет?", "Всегда <strong>p ≤ 0.05</strong> — бинарные данные не могут быть нормальными → используем Манна-Уитни"],
+      ["C5: Сравнение долей между двумя группами — какой тест?", "Шапиро → p ≤ 0.05 → <strong>U-тест Манна-Уитни</strong><br><code>stat, p = stats.mannwhitneyu(free, pro, alternative='two-sided')</code>"],
+      ["C5: Вывод на уровне значимости 3%?", "<code>if p_val < 0.03: print('H0 отвергается')</code><br><code>else: print('H0 не отвергается')</code><br>Не забудь: 3% = 0.03, не 0.3!"],
+    ]
+  },
+  {
     title: "Практика C — ML pipeline",
     cards: [
       ["Как посчитать пропуски в столбце category?", "<code>df['category'].isnull().sum()</code>"],
